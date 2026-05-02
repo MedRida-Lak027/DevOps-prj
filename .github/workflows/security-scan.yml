@@ -1,0 +1,65 @@
+name: DevSecOps Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  grype-scan:
+    name: Grype Vulnerability Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@v0
+        with:
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
+
+      - name: Run Grype Scanner
+        uses: anchore/scan-action@v3
+        id: grype
+        with:
+          sbom: sbom.cdx.json
+          format: sarif
+          output-file: grype-results.sarif
+          fail-build: true
+          severity-cutoff: high
+
+      - name: Upload Grype SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: grype-results.sarif
+          category: grype-static
+
+  nuclei-scan:
+    name: Nuclei Dynamic Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Nuclei
+        uses: projectdiscovery/nuclei-action@v1
+        with:
+          target: https://public-firing-range.appspot.com
+          templates: cves,vulnerabilities,misconfiguration
+          output: nuclei-results.sarif
+          format: sarif
+
+      - name: Upload Nuclei SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: nuclei-results.sarif
+          category: nuclei-dynamic

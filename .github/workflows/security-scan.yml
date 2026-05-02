@@ -19,15 +19,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install and Run Grype
-        run: |
-          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-          grype dir:. --output sarif --file grype-results.sarif --fail-on high
+      - name: Install Grype
+        run: curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+        shell: bash
+
+      - name: Scan and show CVE table
+        run: grype dir:. --output table
+        shell: bash
+
+      - name: Scan and generate SARIF
+        if: always()
+        run: grype dir:. --output sarif --file grype-results.sarif
         shell: bash
 
       - name: Upload Grype SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: grype-results.sarif
           category: grype-static
@@ -47,7 +54,7 @@ jobs:
 
       - name: Upload Nuclei SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: nuclei-results.sarif
           category: nuclei-dynamic

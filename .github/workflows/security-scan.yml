@@ -19,15 +19,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Grype Scanner
-        uses: anchore/scan-action@v3
-        id: grype
-        with:
-          path: "."
-          format: sarif
-          output-file: grype-results.sarif
-          fail-build: true
-          severity-cutoff: high
+      - name: Install and Run Grype
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+          grype dir:. --output sarif --file grype-results.sarif --fail-on high
+        shell: bash
 
       - name: Upload Grype SARIF
         if: always()
